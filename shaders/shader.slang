@@ -4,7 +4,7 @@ static const float pi = 3.1415926535897932384; // tau/2 or something. heard it's
 
 static const float medianAmp = 1. / N_WAVES;
 
-static const float3 topColor = { .7843, .9804, .8392 };
+static const float3 topColor = { .7743, 1., .7792 };
 static const float3 bottomColor = { .3137, .2667, .5529 };
 
 struct VSInput {
@@ -19,6 +19,7 @@ struct UniformBuffer {
     float4x2 centers;
     float4 wavelengths;
     float time;
+    float medianWavelength;
 }
 ConstantBuffer<UniformBuffer> ubo;
 
@@ -39,21 +40,21 @@ VSOutput vertMain(VSInput input) {
     };
 
     // determine sine parameters
-    float4x2 D;
+    float4 D;
     float4 speeds;
     for (int i = 0; i < N_WAVES; i++) {
         float4 rowExtractor = float4(0.);
         rowExtractor[i] = 1.;
 
         float2 c = mul(rowExtractor, ubo.centers);
-        D[i] = normalize(uv-c);
+        D[i] = length(uv-c);
         speeds[i] = sqrt(g * 2. * pi / ubo.wavelengths[i]);
         float freq = 2. / ubo.wavelengths[i];
         float phi = speeds[i] * freq;
 
-        float amp = 
+        float amp = medianAmp * ubo.wavelengths[i] / ubo.medianWavelength;
 
-        output.pos.z += 0.1 * sin(dot(D[i], uv) * freq + phi * ubo.time);
+        output.pos.z += 0.1 * sin(D[i] * freq + phi * ubo.time);
     }
 
     output.waveHeight = output.pos.z;

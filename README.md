@@ -1,5 +1,5 @@
 # Credit
-Much of the code here (basically, everything needed to display a single rectangle onscreen) is based on the official Vulkan tutorial by the Khronos Group.
+Much of the code here (basically, everything needed to display a single rectangle onscreen) is adapted from the official Vulkan tutorial by the Khronos Group.
 
 # What is this?
 This is my way of familiarizing myself with Vulkan through practice.

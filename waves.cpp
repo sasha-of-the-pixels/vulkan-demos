@@ -136,7 +136,8 @@ private:
     std::vector<Vertex> vertices = {};
     std::vector<uint32_t> indices {}; // uint32_t required for 65535+ verts
 
-    static constexpr float medianWavelength = 2.f;
+    static constexpr float MEDIAN_WAVELENGTH = 2.f;
+    static constexpr float SCALE = 10.f;
 
     struct UniformBufferObject {
         glm::mat4 model;
@@ -144,23 +145,26 @@ private:
         glm::mat4 proj;
 
         // wave parameters
-        // glm::mat4x2 centers = glm::mat4x2(
-        //     randf(), randf(), 
-        //     randf(), randf(), 
-        //     randf(), randf(), 
-        //     randf(), randf()
-        // );
-        glm::mat4x2 centers = glm::mat4x2(0.f); // placeholder for debugging
-        // glm::vec4 wavelengths = glm::vec4(
-        //     randf(medianWavelength*.5f, medianWavelength*2.f),
-        //     randf(medianWavelength*.5f, medianWavelength*2.f),
-        //     randf(medianWavelength*.5f, medianWavelength*2.f),
-        //     randf(medianWavelength*.5f, medianWavelength*2.f)
-        // );
-        glm::vec4 wavelengths = glm::vec4(medianWavelength); // placeholder
+        glm::mat4x2 centers = glm::mat4x2(
+            randf(SCALE), randf(SCALE), 
+            randf(SCALE), randf(SCALE), 
+            randf(SCALE), randf(SCALE), 
+            randf(SCALE), randf(SCALE)
+        );
+        // glm::mat4x2 centers = glm::mat4x2(0.f); // placeholder for debugging
+        glm::vec4 wavelengths = glm::vec4(
+            randf(MEDIAN_WAVELENGTH*.5f, MEDIAN_WAVELENGTH*2.f),
+            randf(MEDIAN_WAVELENGTH*.5f, MEDIAN_WAVELENGTH*2.f),
+            randf(MEDIAN_WAVELENGTH*.5f, MEDIAN_WAVELENGTH*2.f),
+            randf(MEDIAN_WAVELENGTH*.5f, MEDIAN_WAVELENGTH*2.f)
+        );
+        // glm::vec4 wavelengths = glm::vec4(medianWavelength); // placeholder
 
         glm::float32_t time;
+        glm::float32_t medianWavelength = MEDIAN_WAVELENGTH;
     };
+
+    UniformBufferObject ubo{};
 
     glm::vec3 randomColor() {
         return glm::vec3(
@@ -172,8 +176,28 @@ private:
 
     // random float in [start, end)
     // optionally fill in with something better eventually
-    static float randf(float start = 0.f, float end = 1.f) {
+    static float randf(float start, float end) {
         return (float)rand()/RAND_MAX*(end - start) + start;
+    }
+    static float randf(float end) {
+        return randf(0.f, end);
+    }
+    static float randf() {
+        return randf(0.f, 1.f);
+    }
+
+    void printWaveParameters(UniformBufferObject &ubo) {
+        printf("Wave centers:\n");
+        for (int i = 0; i < 4; i++) {
+            glm::vec2 c = ubo.centers[i];
+            printf("(%f, %f)\n", c.x, c.y);
+        }
+        printf("\nWavelengths:\n");
+        for (int i = 0; i < 4; i++) {
+            float l = ubo.wavelengths[i];
+            printf("%f ", l);
+        }
+        printf("\n");
     }
 
     void populateVertices(size_t res, float scale=1.f) {
@@ -239,7 +263,7 @@ private:
     }
 
     void initVulkan() {
-        populateVertices(50, 10.f);
+        populateVertices(50, SCALE);
         createInstance();
         setupDebugMessenger();
         createSurface();
@@ -1016,7 +1040,6 @@ private:
             float, std::chrono::seconds::period
         >(currentTime - startTime).count();
 
-        UniformBufferObject ubo{};
         ubo.model = rotate(
             glm::mat4(1.f), glm::radians(0.f), glm::vec3(0.f, 0.f, 1.f)
         );
