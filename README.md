@@ -4,7 +4,7 @@ Much of the code here (basically, everything needed to display a single rectangl
 # What is this?
 This is my way of familiarizing myself with Vulkan through practice.
 
-My current goal is to simulate waves in water, as outlined in chapter 1 of *GPU Gems*. This is a work in progress and does not accomplish the goal yet.
+My current goal is to simulate waves in water, as outlined in chapter 1 of *GPU Gems*. This is a work in progress. Currently I just have a few ripples moving about on a plane. I want to add a normal map and other textural elements, orbit controls, and more scenery.
 
 # Installation
 Clone the repo and build using CMake. I'm currently compiling the shader using the `makefile`, by running `make shader` (in the source directory).
