@@ -88,7 +88,13 @@ private:
     uint32_t semaphoreIndex = 0;
     uint32_t currentFrame   = 0;
 
+    // input/event state
     bool framebufferResized = false;
+    bool mouseDragged       = false;
+    glm::vec2 prevMouseUV  = glm::vec2(0., 0.);
+
+    glm::vec3 cameraPos = glm::vec3(5.f, 5.f, 20.f);
+    const float cameraDist = sqrt(glm::dot(cameraPos, cameraPos));
 
     std::vector<const char*> requiredDeviceExtension = {
         vk::KHRSwapchainExtensionName,
@@ -138,6 +144,7 @@ private:
 
     static constexpr float MEDIAN_WAVELENGTH = 2.f;
     static constexpr float SCALE = 10.f;
+    static constexpr float ORBIT_CONTROL_SPEED = 2.f;
 
     struct UniformBufferObject {
         glm::mat4 model;
@@ -253,6 +260,8 @@ private:
         window = glfwCreateWindow(WIDTH, HEIGHT, "Vulkan", nullptr, nullptr);
         glfwSetWindowUserPointer(window, this);
         glfwSetFramebufferSizeCallback(window, framebufferResizeCallback);
+        glfwSetCursorPosCallback(window, cursorPositionCallback);
+        glfwSetMouseButtonCallback(window, mouseButtonCallback);
     }
 
     static void framebufferResizeCallback(
@@ -260,6 +269,58 @@ private:
     ) {
         auto app = reinterpret_cast<HelloTriangleApplication*>(glfwGetWindowUserPointer(window));
         app->framebufferResized = true;
+    }
+
+    static void mouseButtonCallback(GLFWwindow *window, int button, int action, int mods) {
+        auto app = reinterpret_cast<HelloTriangleApplication*>(glfwGetWindowUserPointer(window));
+        app->mouseDragged = action == GLFW_PRESS;
+        if (action == GLFW_PRESS) {
+            double x, y;
+            glfwGetCursorPos(window, &x, &y);
+            glm::vec2 uv = glm::vec2(
+                (x - app->swapChainExtent.width/2.)/app->swapChainExtent.height,
+                (y - app->swapChainExtent.height/2.)/app->swapChainExtent.height
+            );
+            app->prevMouseUV = uv;
+        }
+    }
+
+    // Callback for mouse movement
+    static void cursorPositionCallback(GLFWwindow *window, double x, double y) {
+        // Handle mouse movement
+        auto app = reinterpret_cast<HelloTriangleApplication*>(glfwGetWindowUserPointer(window));
+        bool mouseDragged = app->mouseDragged;
+        glm::vec3 cp = app->cameraPos;
+
+        if (!mouseDragged) return;
+        printf("old cameraPos: (%f, %f, %f)\n", cp.x, cp.y, cp.z);
+        std::cout << "Mouse position: " << x << ", " << y << std::endl;
+        // move camera_pos around circle
+        float x2 = cp.x * cp.x,
+              y2 = cp.y * cp.y,
+              z2 = cp.z * cp.z;
+        float phi = acos(cp.x/sqrt(x2+y2)) * (cp.y>=0?1:-1);
+        float theta = acos(cp.z/sqrt(x2+y2+z2));
+        printf("initial phi, theta: (%f, %f)\n", phi, theta);
+        glm::vec2 uv = glm::vec2(
+            (x - app->swapChainExtent.width/2.)/app->swapChainExtent.height,
+            (y - app->swapChainExtent.height/2.)/app->swapChainExtent.height
+        );
+        printf("uv: (%f, %f)\n", uv.x, uv.y);
+        glm::vec2 dudv = uv - app->prevMouseUV;
+        printf("dudv: (%f, %f)\n", dudv.x, dudv.y);
+
+        phi -= dudv.x * ORBIT_CONTROL_SPEED;
+        theta = std::max(theta - dudv.y * ORBIT_CONTROL_SPEED, 0.0001f);
+        printf("new phi, theta: (%f, %f)\n", phi, theta);
+
+        app->cameraPos = glm::vec3(
+            app->cameraDist*sin(theta)*cos(phi), 
+            app->cameraDist*sin(theta)*sin(phi),
+            app->cameraDist*cos(theta)
+        );
+        printf("new cameraPos: (%f, %f, %f)\n", app->cameraPos.x, app->cameraPos.y, app->cameraPos.z);
+        app->prevMouseUV = uv;
     }
 
     void initVulkan() {
@@ -1044,7 +1105,7 @@ private:
             glm::mat4(1.f), glm::radians(0.f), glm::vec3(0.f, 0.f, 1.f)
         );
         ubo.view = lookAt(
-            glm::vec3(5.f, 5.f, 20.f), 
+            cameraPos, 
             glm::vec3(0.f, 0.f, 0.f), 
             glm::vec3(0.f, 0.f, 1.f)
         );
